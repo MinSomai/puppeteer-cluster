@@ -9,23 +9,28 @@ export interface ExecuteCallbacks {
     reject: ExecuteReject;
 }
 
+export interface IJobArgs<JobData, ReturnData> {
+    data?: JobData,
+    taskFunction?: TaskFunction<JobData, ReturnData>,
+    executeCallbacks?: ExecuteCallbacks,
+    workerId?: number,
+}
+
 export default class Job<JobData, ReturnData> {
 
     public data?: JobData;
     public taskFunction: TaskFunction<JobData, ReturnData> | undefined;
     public executeCallbacks: ExecuteCallbacks | undefined;
+    public workerId?: number;
 
     private lastError: Error | null = null;
     public tries: number = 0;
 
-    public constructor(
-        data?: JobData,
-        taskFunction?: TaskFunction<JobData, ReturnData>,
-        executeCallbacks?: ExecuteCallbacks,
-    ) {
-        this.data = data;
-        this.taskFunction = taskFunction;
-        this.executeCallbacks = executeCallbacks;
+    public constructor(arg: IJobArgs<JobData, ReturnData>) {
+        this.data = arg.data;
+        this.taskFunction = arg.taskFunction;
+        this.executeCallbacks = arg.executeCallbacks;
+        this.workerId = arg.workerId
     }
 
     public getUrl(): string | undefined {

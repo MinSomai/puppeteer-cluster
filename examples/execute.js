@@ -3,7 +3,7 @@ const { Cluster } = require('../dist');
 (async () => {
     // Create a cluster with 2 workers
     const cluster = await Cluster.launch({
-        concurrency: Cluster.CONCURRENCY_CONTEXT,
+        concurrency: Cluster.CONCURRENCY_MULTI_PAGE,
         maxConcurrency: 2,
     });
 

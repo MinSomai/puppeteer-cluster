@@ -61,8 +61,8 @@ describe('options', () => {
         });
 
         // one job sets the cookie, the other page reads the cookie
-        cluster.queue(TEST_URL);
-        cluster.queue(TEST_URL);
+        cluster.queue({ data: TEST_URL });
+        cluster.queue({ data: TEST_URL });
 
         await cluster.idle();
         await cluster.close();
@@ -105,8 +105,8 @@ describe('options', () => {
                     expect(url).toBe(TEST_URL);
                 });
 
-                cluster.queue(TEST_URL);
-                cluster.queue(TEST_URL);
+                cluster.queue({ data: TEST_URL });
+                cluster.queue({ data: TEST_URL });
 
                 await cluster.idle();
                 await cluster.close();
@@ -131,8 +131,8 @@ describe('options', () => {
                     expect(url).toBe(sameUrl);
                 });
 
-                cluster.queue(sameUrl);
-                cluster.queue(sameUrl);
+                cluster.queue({ data: sameUrl });
+                cluster.queue({ data: sameUrl });
 
                 await cluster.idle();
                 await cluster.close();
@@ -153,7 +153,7 @@ describe('options', () => {
                     throw new Error('testing retryLimit');
                 });
 
-                cluster.queue(TEST_URL);
+                cluster.queue({ data: TEST_URL });
 
                 await cluster.idle();
                 await cluster.close();
@@ -169,8 +169,8 @@ describe('options', () => {
                 cluster.task(async ({ page, data: url }) => {
                     counter += 1;
                 });
-                cluster.queue(TEST_URL);
-                cluster.queue(TEST_URL);
+                cluster.queue({ data: TEST_URL });
+                cluster.queue({ data: TEST_URL });
 
                 expect(counter).toBe(0);
                 await cluster.waitForOne();
@@ -200,7 +200,7 @@ describe('options', () => {
                     }
                 });
 
-                cluster.queue(ERROR_URL);
+                cluster.queue({ data: ERROR_URL });
 
                 const url1 = await cluster.waitForOne();
                 expect(url1).toBe(ERROR_URL);
@@ -232,7 +232,7 @@ describe('options', () => {
                     }
                 });
 
-                cluster.queue(ERROR_URL);
+                cluster.queue({ data: ERROR_URL });
 
                 const url1 = await cluster.waitForOne();
                 expect(url1).toBe(ERROR_URL);
@@ -272,10 +272,10 @@ describe('options', () => {
                     expect(counter).toBe(counterShouldBe);
                 });
 
-                cluster.queue({ url: FIRST_URL, counterShouldBe: 1 });
-                cluster.queue({ url: FIRST_URL, counterShouldBe: 3 });
+                cluster.queue({ data: { url: FIRST_URL, counterShouldBe: 1 } });
+                cluster.queue({ data: { url: FIRST_URL, counterShouldBe: 3 } });
                 await cluster.waitForOne();
-                cluster.queue({ url: SECOND_URL, counterShouldBe: 2 });
+                cluster.queue({ data: { url: SECOND_URL, counterShouldBe: 2 } });
 
                 await cluster.idle();
                 await cluster.close();
@@ -302,10 +302,10 @@ describe('options', () => {
                     expect(counter).toBe(counterShouldBe);
                 });
 
-                cluster.queue({ url: FIRST_URL, counterShouldBe: 1 });
-                cluster.queue({ url: FIRST_URL, counterShouldBe: 3 });
+                cluster.queue({ data: { url: FIRST_URL, counterShouldBe: 1 } });
+                cluster.queue({ data: { url: FIRST_URL, counterShouldBe: 3 } });
                 await cluster.waitForOne();
-                cluster.queue({ url: SECOND_URL, counterShouldBe: 2 });
+                cluster.queue({ data: { url: SECOND_URL, counterShouldBe: 2 } });
 
                 await cluster.idle();
                 await cluster.close();
@@ -323,14 +323,18 @@ describe('options', () => {
                     throw err;
                 });
 
-                cluster.queue(async ({ page, data }: { page: any, data: any}) => {
-                    expect(page).toBeDefined();
-                    expect(data).toBeUndefined();
+                cluster.queue({
+                    taskFunction: async ({ page, data }: { page: any, data: any }) => {
+                        expect(page).toBeDefined();
+                        expect(data).toBeUndefined();
+                    }
                 });
 
-                cluster.queue('something', async ({ page, data: url }) => {
-                    expect(page).toBeDefined();
-                    expect(url).toBe('something');
+                cluster.queue({
+                    data: 'something', taskFunction: async ({ page, data: url }) => {
+                        expect(page).toBeDefined();
+                        expect(url).toBe('something');
+                    }
                 });
 
                 await cluster.idle();
@@ -355,16 +359,19 @@ describe('options', () => {
                     expect(url).toBe('works');
                 });
 
-                cluster.queue('works too', async ({ page, data: url }) => {
-                    expect(page).toBeDefined();
-                    expect(url).toBe('works too');
+                cluster.queue({
+                    data: 'works too', taskFunction: async ({ page, data: url }) => {
+                        expect(page).toBeDefined();
+                        expect(url).toBe('works too');
+                    }
                 });
-                cluster.queue('works');
-                cluster.queue(async ({ page, data }: { page: any, data: any}) => {
+                cluster.queue({ data: 'works' });
+                cluster.queue({ taskFunction: async ({ page, data }: { page: any, data: any}) => {
                     expect(page).toBeDefined();
                     expect(data).toBeUndefined();
-                });
-                cluster.queue('works');
+                }});
+
+                cluster.queue({ data: 'works' });
 
                 await cluster.idle();
                 await cluster.close();
@@ -383,7 +390,7 @@ describe('options', () => {
                 await cluster.task(async ({ page, data }) => {
                     expect(data.a.b).toBe('test');
                 });
-                cluster.queue({ a: { b: 'test' } });
+                cluster.queue({ data: { a: { b: 'test' } }});
 
                 await cluster.idle();
                 await cluster.close();
@@ -423,8 +430,8 @@ describe('options', () => {
                 await cluster.task(async ({ page, data }) => {
                     return data;
                 });
-                const value1 = await cluster.execute(1);
-                const value2 = await cluster.execute('something');
+                const value1 = await cluster.execute({ data: 1 });
+                const value2 = await cluster.execute({ data: 'something' });
                 expect(value1).toBe(1);
                 expect(value2).toBe('something');
 
@@ -444,12 +451,14 @@ describe('options', () => {
                     throw err;
                 });
 
-                const value1 = await cluster.execute(async () => {
+                const value1 = await cluster.execute({ taskFunction: async () => {
                     return 'some value';
-                });
+                }});
                 expect(value1).toBe('some value');
-                const value2 = await cluster.execute('world', async ({ data }) => {
-                    return `hello ${data}`;
+                const value2 = await cluster.execute({
+                    data: 'world', taskFunction: async ({ data }) => {
+                        return `hello ${data}`;
+                    }
                 });
                 expect(value2).toBe('hello world');
 
@@ -475,13 +484,13 @@ describe('options', () => {
                     throw new Error(data);
                 });
                 try {
-                    const value1 = await cluster.execute('executed');
+                    const value1 = await cluster.execute({ data: 'executed'});
                     expect(1).toBe(2); // fail, should never reach this point
                 } catch (e: any) {
                     // execute is catched in here
                     expect(e.message).toBe('executed');
                 }
-                cluster.queue('queued');
+                cluster.queue({ data: 'queued'});
 
                 await cluster.idle();
                 await cluster.close();
@@ -532,13 +541,13 @@ describe('options', () => {
                     // ...
                 });
 
-                cluster.queue('1');
-                cluster.queue(func2);
-                cluster.queue('3', func3);
+                cluster.queue({ data: '1' });
+                cluster.queue({ taskFunction: func2 });
+                cluster.queue({ data: '3', taskFunction: func3 });
 
-                await cluster.execute('4');
-                await cluster.execute(func2);
-                await cluster.execute('6', func3);
+                await cluster.execute({ data: '4' });
+                await cluster.execute({ taskFunction: func2 });
+                await cluster.execute({ data: '6', taskFunction: func3 });
 
                 await cluster.idle();
                 await cluster.close();
@@ -572,8 +581,8 @@ describe('options', () => {
         });
 
         // one job sets the cookie, the other page reads the cookie
-        cluster.queue(TEST_URL);
-        cluster.queue(TEST_URL);
+        cluster.queue({ data: TEST_URL });
+        cluster.queue({ data: TEST_URL });
 
         await cluster.idle();
         await cluster.close();
@@ -634,8 +643,8 @@ describe('options', () => {
             });
 
             // one job sets the cookie, the other page reads the cookie
-            cluster.queue(TEST_URL);
-            cluster.queue(TEST_URL);
+            cluster.queue({ data: TEST_URL });
+            cluster.queue({ data: TEST_URL });
 
             await cluster.idle();
             await cluster.close();
@@ -658,8 +667,8 @@ describe('options', () => {
             });
 
             // one job sets the cookie, the other page reads the cookie
-            cluster.queue(TEST_URL);
-            cluster.queue(TEST_URL);
+            cluster.queue({ data: TEST_URL });
+            cluster.queue({ data: TEST_URL });
 
             await cluster.idle();
             await cluster.close();
@@ -733,8 +742,8 @@ describe('options', () => {
             });
 
             // one job sets the cookie, the other page reads the cookie
-            cluster.queue(TEST_URL);
-            cluster.queue(TEST_URL);
+            cluster.queue({ data: TEST_URL });
+            cluster.queue({ data: TEST_URL });
 
             await cluster.idle();
             await cluster.close();
@@ -783,7 +792,7 @@ describe('options', () => {
                 await new Promise(resolve => setTimeout(resolve, 550));
             });
 
-            cluster.queue(TEST_URL);
+            cluster.queue({ data: TEST_URL });
 
             // there should be at least one logging call in a 500ms interval
             output = '';
@@ -814,27 +823,31 @@ describe('Repair', () => {
                 });
 
                 // first job kills the browser
-                cluster.queue(async ({ page }: { page: puppeteer.Page }) => {
-                    // kill process
-                    await new Promise((resolve) => {
-                        kill(page.browser().process()!.pid, 'SIGKILL', resolve);
-                    });
+                cluster.queue({
+                    taskFunction: async ({ page }: { page: puppeteer.Page }) => {
+                        // kill process
+                        await new Promise((resolve) => {
+                            kill(page.browser().process()!.pid, 'SIGKILL', resolve);
+                        });
 
-                    // check if its actually crashed
-                    await expect(
-                        page.goto(TEST_URL),
-                    ).rejects.toMatchObject({
-                        // error message of puppeteer disconnect
-                        // before 1.9 -> error said "Protocol error"
-                        // since 1.9 -> "Navigation failed because browser has disconnected!"
-                        message: expect.stringMatching(/Protocol error|disconnected/),
-                    });
+                        // check if its actually crashed
+                        await expect(
+                            page.goto(TEST_URL),
+                        ).rejects.toMatchObject({
+                            // error message of puppeteer disconnect
+                            // before 1.9 -> error said "Protocol error"
+                            // since 1.9 -> "Navigation failed because browser has disconnected!"
+                            message: expect.stringMatching(/Protocol error|disconnected/),
+                        });
+                    }
                 });
 
                 // second one should still work after the crash
-                cluster.queue(async ({ page }: { page: puppeteer.Page }) => {
-                    await page.goto(TEST_URL); // if this does not throw, we are happy
-                    expect(true).toBe(true);
+                cluster.queue({
+                    taskFunction: async ({ page }: { page: puppeteer.Page }) => {
+                        await page.goto(TEST_URL); // if this does not throw, we are happy
+                        expect(true).toBe(true);
+                    }
                 });
 
                 await cluster.idle();

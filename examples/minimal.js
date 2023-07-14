@@ -1,4 +1,4 @@
-const { Cluster } = require('../dist');
+const { Cluster } = require("../dist");
 
 (async () => {
     // Create a cluster with 2 workers
@@ -11,15 +11,15 @@ const { Cluster } = require('../dist');
     await cluster.task(async ({ page, data: url }) => {
         await page.goto(url);
 
-        const path = url.replace(/[^a-zA-Z]/g, '_') + '.png';
+        const path = url.replace(/[^a-zA-Z]/g, "_") + ".png";
         await page.screenshot({ path });
         console.log(`Screenshot of ${url} saved: ${path}`);
     });
 
     // Add some pages to queue
-    cluster.queue('https://www.google.com');
-    cluster.queue('https://www.wikipedia.org');
-    cluster.queue('https://github.com/');
+    cluster.queue({ data: "https://www.google.com" });
+    cluster.queue({ data: "https://www.wikipedia.org" });
+    cluster.queue({ data: "https://github.com/" });
 
     // Shutdown after everything is done
     await cluster.idle();

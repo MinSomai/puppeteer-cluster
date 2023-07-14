@@ -52,6 +52,18 @@ export default class Worker<JobData, ReturnData> implements WorkerOptions {
             job: Job<JobData, ReturnData>,
             timeout: number,
         ): Promise<WorkResult> {
+
+        const workerId = job?.workerId; // Retrieve the worker ID from the job data
+
+        // If workerid is provided, workerId should match(decided from Cluster.ts)
+        if (workerId && workerId !== this.id) {
+            // Skip executing the task if the worker ID doesn't match
+            return {
+              type: 'error',
+              error: new Error(`Job assigned to worker #${this.id}, expected worker #${workerId}`),
+            };
+        }
+
         this.activeTarget = job;
 
         let jobInstance: JobInstance | null = null;

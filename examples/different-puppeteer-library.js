@@ -1,5 +1,5 @@
-const { Cluster } = require('../dist');
-const puppeteer = require('puppeteer-core'); // use puppeteer-core instead of puppeteer
+const { Cluster } = require("../dist");
+const puppeteer = require("puppeteer-core"); // use puppeteer-core instead of puppeteer
 
 (async () => {
     const cluster = await Cluster.launch({
@@ -10,19 +10,19 @@ const puppeteer = require('puppeteer-core'); // use puppeteer-core instead of pu
         puppeteer,
         // and provide executable path (in this case for a Chrome installation in Ubuntu)
         puppeteerOptions: {
-            executablePath: 'google-chrome-stable',
+            executablePath: "google-chrome-stable",
         },
     });
 
     await cluster.task(async ({ page, data: url }) => {
         await page.goto(url);
 
-        console.log('went to: ' + url);
+        console.log("went to: " + url);
     });
 
-    cluster.queue('https://www.google.com');
-    cluster.queue('https://www.wikipedia.org');
-    cluster.queue('https://github.com/');
+    cluster.queue({ data: "https://www.google.com" });
+    cluster.queue({ data: "https://www.wikipedia.org" });
+    cluster.queue({ data: "https://github.com/" });
 
     await cluster.idle();
     await cluster.close();

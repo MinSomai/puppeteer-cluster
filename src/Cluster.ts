@@ -30,6 +30,25 @@ interface ClusterOptions {
     puppeteer: any;
 }
 
+export interface IQueueArgs<JobData, ReturnData> {
+    data?: JobData | TaskFunction<JobData, ReturnData>,
+    taskFunction?: TaskFunction<JobData, ReturnData>,
+    workerId?: number
+}
+
+export interface IQueueJobArgs<JobData, ReturnData> {
+    data?: JobData | TaskFunction<JobData, ReturnData>,
+    taskFunction?: TaskFunction<JobData, ReturnData>,
+    callbacks?: ExecuteCallbacks,
+    workerId?: number,
+}
+
+export interface IExecuteArgs<JobData, ReturnData> {
+    data?: JobData | TaskFunction<JobData, ReturnData>,
+    taskFunction?: TaskFunction<JobData, ReturnData>,
+    workerId?: number
+}
+
 type Partial<T> = {
     [P in keyof T]?: T[P];
 };
@@ -74,6 +93,7 @@ export default class Cluster<JobData = any, ReturnData = any> extends EventEmitt
     static CONCURRENCY_PAGE = 1; // shares cookies, etc.
     static CONCURRENCY_CONTEXT = 2; // no cookie sharing (uses contexts)
     static CONCURRENCY_BROWSER = 3; // no cookie sharing and individual processes (uses contexts)
+    static CONCURRENCY_MULTI_PAGE = 4; // no cookie sharing and individual processes (uses contexts)
 
     private options: ClusterOptions;
     private perBrowserOptions: PuppeteerNodeLaunchOptions[] | null = null;
@@ -140,6 +160,8 @@ export default class Cluster<JobData = any, ReturnData = any> extends EventEmitt
         }
 
         if (this.options.concurrency === Cluster.CONCURRENCY_PAGE) {
+            this.browser = new builtInConcurrency.Page(browserOptions, puppeteer);
+        } else if (this.options.concurrency === Cluster.CONCURRENCY_MULTI_PAGE) {
             this.browser = new builtInConcurrency.Page(browserOptions, puppeteer);
         } else if (this.options.concurrency === Cluster.CONCURRENCY_CONTEXT) {
             this.browser = new builtInConcurrency.Context(browserOptions, puppeteer);
@@ -217,6 +239,11 @@ export default class Cluster<JobData = any, ReturnData = any> extends EventEmitt
 
     public async task(taskFunction: TaskFunction<JobData, ReturnData>) {
         this.taskFunction = taskFunction;
+    }
+
+    // Add this method to retrieve a worker by ID
+    public getWorkerById(id: number): Worker<JobData, ReturnData> | undefined {
+      return this.workers.find(worker => worker.id === id);
     }
 
     private nextWorkCall: number = 0;
@@ -301,7 +328,22 @@ export default class Cluster<JobData = any, ReturnData = any> extends EventEmitt
             this.lastDomainAccesses.set(domain, Date.now());
         }
 
-        const worker = this.workersAvail.shift() as Worker<JobData, ReturnData>;
+        const workerId = job?.workerId; // Retrieve the worker ID from the job data
+//         let worker: Worker<JobData, ReturnData> | undefined;
+
+        let worker: Worker<JobData, ReturnData> | undefined;
+
+        if (workerId) {
+            // Use the getWorkerById() method to retrieve the specific worker
+            worker = this.getWorkerById(workerId);
+        }
+
+        // EXISTING functionality
+        if (worker === undefined) {
+            // No specific worker found, use the existing logic to select an available worker
+            worker = this.workersAvail.shift() as Worker<JobData, ReturnData>;
+        }
+
         this.workersBusy.push(worker);
 
         if (this.workersAvail.length !== 0 || this.allowedToStartWorker()) {
@@ -383,20 +425,16 @@ export default class Cluster<JobData = any, ReturnData = any> extends EventEmitt
         return (typeof data === 'function');
     }
 
-    private queueJob(
-        data: JobData | TaskFunction<JobData, ReturnData>,
-        taskFunction?: TaskFunction<JobData, ReturnData>,
-        callbacks?: ExecuteCallbacks,
-    ): void {
+    private queueJob(arg: IQueueJobArgs<JobData, ReturnData>): void {
         let realData: JobData | undefined;
         let realFunction: TaskFunction<JobData, ReturnData> | undefined;
-        if (this.isTaskFunction(data)) {
-            realFunction = data;
+        if (arg.data && this.isTaskFunction(arg.data)) {
+            realFunction = arg.data;
         } else {
-            realData = data;
-            realFunction = taskFunction;
+            realData = arg.data;
+            realFunction = arg.taskFunction;
         }
-        const job = new Job<JobData, ReturnData>(realData, realFunction, callbacks);
+        const job = new Job<JobData, ReturnData>({ data: realData, taskFunction: realFunction, executeCallbacks: arg.callbacks, workerId: arg.workerId });
 
         this.allTargetCount += 1;
         this.jobQueue.push(job);
@@ -404,34 +442,16 @@ export default class Cluster<JobData = any, ReturnData = any> extends EventEmitt
         this.work();
     }
 
-    public async queue(
-        data: JobData,
-        taskFunction?: TaskFunction<JobData, ReturnData>,
-    ): Promise<void>;
-    public async queue(
-        taskFunction: TaskFunction<JobData, ReturnData>,
-    ): Promise<void>;
-    public async queue(
-        data: JobData | TaskFunction<JobData, ReturnData>,
-        taskFunction?: TaskFunction<JobData, ReturnData>,
-    ): Promise<void> {
-        this.queueJob(data, taskFunction);
+
+    public async queue(arg: IQueueArgs<JobData, ReturnData> | null): Promise<void> {
+        if(arg == null) return;
+        this.queueJob({ data: arg.data, taskFunction: arg.taskFunction, workerId: arg.workerId });
     }
 
-    public execute(
-        data: JobData,
-        taskFunction?: TaskFunction<JobData, ReturnData>,
-    ): Promise<ReturnData>;
-    public execute(
-        taskFunction: TaskFunction<JobData, ReturnData>,
-    ): Promise<ReturnData>;
-    public execute(
-        data: JobData | TaskFunction<JobData, ReturnData>,
-        taskFunction?: TaskFunction<JobData, ReturnData>,
-    ): Promise<ReturnData> {
+    public execute(arg: IExecuteArgs<JobData, ReturnData>): Promise<ReturnData> {
         return new Promise<ReturnData>((resolve: ExecuteResolve, reject: ExecuteReject) => {
             const callbacks = { resolve, reject };
-            this.queueJob(data, taskFunction, callbacks);
+            this.queueJob({ data: arg.data, taskFunction: arg.taskFunction, callbacks, workerId: arg.workerId });
         });
     }
 

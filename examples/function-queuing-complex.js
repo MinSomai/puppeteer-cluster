@@ -1,4 +1,4 @@
-const { Cluster } = require('../dist');
+const { Cluster } = require("../dist");
 
 (async () => {
     const cluster = await Cluster.launch({
@@ -9,7 +9,7 @@ const { Cluster } = require('../dist');
     // We don't define a task and instead use own functions
     const screenshot = async ({ page, data: url }) => {
         await page.goto(url);
-        const path = url.replace(/[^a-zA-Z]/g, '_') + '.png';
+        const path = url.replace(/[^a-zA-Z]/g, "_") + ".png";
         await page.screenshot({ path });
     };
 
@@ -20,18 +20,20 @@ const { Cluster } = require('../dist');
     };
 
     // Make screenshots
-    cluster.queue('https://www.google.com/', screenshot);
-    cluster.queue('https://github.com/', screenshot);
+    cluster.queue({ data: "https://www.google.com/" }, screenshot);
+    cluster.queue({ data: "https://github.com/" }, screenshot);
 
     // But also do some other stuff
-    cluster.queue('https://reddit.com/', extractTitle);
-    cluster.queue('https://twitter.com/', extractTitle);
+    cluster.queue({ data: "https://reddit.com/" }, extractTitle);
+    cluster.queue({ data: "https://twitter.com/" }, extractTitle);
 
     // We can still define single functions
-    cluster.queue(async ({ page }) => {
-        await page.goto('https://www.google.com/');
-        // ...
-        console.log('Went to google.com');
+    cluster.queue({
+        taskFunction: async ({ page }) => {
+            await page.goto("https://www.google.com/");
+            // ...
+            console.log("Went to google.com");
+        },
     });
 
     await cluster.idle();

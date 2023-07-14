@@ -10,6 +10,9 @@ const fs = require('fs').promises;
         concurrency: Cluster.CONCURRENCY_CONTEXT,
         maxConcurrency: 2,
         monitor: true,
+        puppeteerOptions: {
+            headless: false
+        }
     });
 
     // Extracts document.title of the crawled pages

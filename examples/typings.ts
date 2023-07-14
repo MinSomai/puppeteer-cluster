@@ -1,4 +1,4 @@
-import { Cluster } from '../dist';
+import { Cluster } from "../dist";
 
 (async () => {
     /******************************* STRING -> NUMBER **********************/
@@ -16,7 +16,7 @@ import { Cluster } from '../dist';
     });
 
     // TypeScript now knows that data1 is a number
-    const data1 = await cluster1.execute('https://www.google.com');
+    const data1 = await cluster1.execute({ data: "https://www.google.com" });
 
     await cluster1.idle();
     await cluster1.close();
@@ -33,9 +33,9 @@ import { Cluster } from '../dist';
         await page.goto(url);
     });
 
-    cluster2.queue('https://www.google.com');
-    cluster2.queue('https://www.wikipedia.org');
-    cluster2.queue('https://github.com/');
+    cluster2.queue({ data: "https://www.google.com" });
+    cluster2.queue({ data: "https://www.wikipedia.org" });
+    cluster2.queue({ data: "https://github.com/" });
 
     await cluster2.idle();
     await cluster2.close();
@@ -57,9 +57,9 @@ import { Cluster } from '../dist';
         console.log(`some value: ${data.someValue}`);
     });
 
-    cluster3.queue({ url: 'https://www.google.com', someValue: 1 });
-    cluster3.queue({ url: 'https://www.wikipedia.org', someValue: 2 });
-    cluster3.queue({ url: 'https://github.com/', someValue: 3 });
+    cluster3.queue({ data: { url: "https://www.google.com", someValue: 1 } });
+    cluster3.queue({ data: { url: "https://www.wikipedia.org", someValue: 2 } });
+    cluster3.queue({ data: { url: "https://github.com/", someValue: 3 } });
 
     await cluster3.idle();
     await cluster3.close();
